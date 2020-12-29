@@ -1,0 +1,77 @@
+<html>
+<script>
+    function headerReplace(data, replacementList) {
+        var lines = data.split('\n');
+        var headers = {};
+        
+        // Dictionary for easier lookup
+        lines[0].split(',').forEach(header => {
+            headers[header] = header;
+        });
+
+        replacementList.forEach(replacement => {
+            if (headers[replacement.old]) {
+                headers[replacement.old] = replacement.new;
+                console.log(`Replaced ${replacement.old} with ${replacement.new}`);
+            }
+        });
+
+        lines[0] = Object.keys(headers).map(x => headers[x]).join(',');
+        return lines.join('\n');
+    }
+    
+    function readFile(file) {
+        const reader = new FileReader();
+        reader.addEventListener('load', (event) => {
+            var data = event.target.result;
+            console.log('Loaded', file.name);
+            data = headerReplace(data, [
+                { old: 'Ref', new: 'Designator' },
+                { old: 'PosX', new: 'Mid X' },
+                { old: 'PosY', new: 'Mid Y' },
+                { old: 'Rot', new: 'Rotation' },
+                { old: 'Side', new: 'Layer' }
+            ]);
+            downloadCsv(data, file.name);
+        });
+        reader.readAsBinaryString(file);
+    }
+
+    // https://stackoverflow.com/questions/14964035/how-to-export-javascript-array-info-to-csv-on-client-side
+    function downloadCsv(data, fileName) {
+        var filename = `JLC-${Date.now()}-${fileName}`;
+
+        var blob = new Blob([data], { type: 'text/csv;charset=utf-8;' });
+        if (navigator.msSaveBlob) { // IE 10+
+            navigator.msSaveBlob(blob, filename);
+        }else{
+            var link = document.createElement("a");
+            if (link.download !== undefined) { // feature detection
+                // Browsers that support HTML5 download attribute
+                var url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        var fileSelector = document.getElementById('file-selector');
+        fileSelector.addEventListener('change', (event) => {
+            readFile(event.target.files[0]);
+        });
+    });
+</script>
+<body>
+Generate JLC CPL file from Kicad Footprint Position (.pos) file.<br>
+If you haven't already done so, 
+<a href="https://support.jlcpcb.com/article/84-how-to-generate-the-bom-and-centroid-file-from-kicad#toc_1.2">generate a .pos file from Kicad</a>.<br>
+<br>
+<input type="file" id="file-selector" accept=".csv">
+
+</body>
+</html>
